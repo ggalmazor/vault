@@ -31,12 +31,12 @@ public class Vault {
   }
 
   @SuppressWarnings("unchecked")
-  public <T> VaultSupplier<T> memoize(VaultSupplier<T> supplier) {
+  private <T> VaultSupplier<T> memoize(VaultSupplier<T> supplier) {
     return vault -> (T) instances.computeIfAbsent(supplier, s -> s.apply(this));
   }
 
   @SuppressWarnings("unchecked")
-  public <T> Optional<VaultSupplier<T>> getSupplierOf(Class<T> clazz) {
+  private <T> Optional<VaultSupplier<T>> getSupplierOf(Class<T> clazz) {
     Optional<VaultSupplier<T>> ownSupplier = Optional.ofNullable((VaultSupplier<T>) suppliers.get(clazz));
     return ownSupplier.isPresent() ? ownSupplier : getParentSupplierOf(clazz);
   }
