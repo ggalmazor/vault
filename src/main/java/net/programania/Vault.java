@@ -51,13 +51,17 @@ public class Vault implements LifeCycle {
   }
 
   @Override
-  public void start() {
+  @SuppressWarnings("unchecked")
+  public Vault start() {
     changeLifeCycle(LifeCycle::start);
+    return this;
   }
 
   @Override
-  public void stop() {
+  @SuppressWarnings("unchecked")
+  public Vault stop() {
     changeLifeCycle(LifeCycle::stop);
+    return this;
   }
 
   private void changeLifeCycle(final Consumer<LifeCycle> lifeCycleChanger) {

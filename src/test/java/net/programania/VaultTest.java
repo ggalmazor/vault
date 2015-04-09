@@ -2,8 +2,6 @@ package net.programania;
 
 import org.junit.Test;
 
-import java.util.List;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -130,13 +128,17 @@ public class VaultTest {
     public Status status = Status.IDLE;
 
     @Override
-    public void start() {
+    @SuppressWarnings("unchecked")
+    public SomeService start() {
       status = Status.STARTED;
+      return this;
     }
 
     @Override
-    public void stop() {
+    @SuppressWarnings("unchecked")
+    public SomeService stop() {
       status = Status.STOPPED;
+      return this;
     }
 
     public String doSomething() {

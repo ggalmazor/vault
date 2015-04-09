@@ -1,7 +1,7 @@
 package net.programania;
 
 public interface LifeCycle {
-  void start();
+  <T extends LifeCycle> T start();
 
-  void stop();
+  <T extends LifeCycle> T stop();
 }
