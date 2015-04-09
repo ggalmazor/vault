@@ -2,16 +2,19 @@ package net.programania;
 
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class VaultTest {
 
   public static final String IT_WORKS = "It Works!";
+  private static final String ITS_STOPPED = "It's stopped now!";
 
   @Test
-  public void test_basic_use() {
-    Vault vault = Vault.empty();
+  public void vaults_should_register_suppliers_and_get_singletons() {
+    Vault vault = new Vault();
     vault.register(A.class, v -> new A());
     vault.register(B.class, v -> new B(v.get(A.class)));
     vault.register(C.class, v -> new C(v.get(B.class)));
@@ -23,19 +26,30 @@ public class VaultTest {
   }
 
   @Test
-  public void test_composable() throws Exception {
-    Vault parentOne = Vault.empty();
+  public void vaults_should_be_composable() throws Exception {
+    Vault parentOne = new Vault();
     parentOne.register(D.class, v -> new D());
 
-    Vault parentTwo = Vault.with(parentOne);
+    Vault parentTwo = new Vault(parentOne);
     parentTwo.register(E.class, v -> new E());
 
-    Vault child = Vault.with(parentOne, parentTwo);
-    child.register(F.class, v->new F(v.get(D.class), v.get(E.class)));
+    Vault child = new Vault(parentOne, parentTwo);
+    child.register(F.class, v -> new F(v.get(D.class), v.get(E.class)));
 
     assertThat(child.get(F.class).getD(), is(parentOne.get(D.class)));
     assertThat(child.get(F.class).getE(), is(parentTwo.get(E.class)));
+  }
 
+  @Test
+  public void vaults_can_start_or_stop_LifeCycle_extending_instances() {
+    Vault vault = new Vault();
+    vault.register(SomeService.class, v -> new SomeService());
+
+    SomeConsumer someConsumer = new SomeConsumer(vault);
+    someConsumer.start();
+    assertThat(someConsumer.doSomething(), is(IT_WORKS));
+    someConsumer.stop();
+    assertThat(someConsumer.doSomething(), is(ITS_STOPPED));
   }
 
   public static class A {
@@ -97,37 +111,38 @@ public class VaultTest {
       return e;
     }
   }
-  /*
-    //adapters.db
-    DBPort dbPortReal = DBPort.empty();
-    dbPort.register(DataSource.class, v -> null);
-    dbPort.register(PatientsRepo.class, v -> new PatientsRepo(v.get(DataSource.class)));
-    dbPort.register(PatientsRepo.class, v -> new PatientsRepo(v.get(DataSource.class)));
-    dbPort.register(PatientsRepo.class, v -> new PatientsRepo(v.get(DataSource.class)));
-    dbPort.register(PatientsRepo.class, v -> new PatientsRepo(v.get(DataSource.class)));
 
-    //hexagono
-    DBPort dbPortInMemory = InMemoryDBPort.empty();
-    dbPort.register(PatientsRepo.class, v -> new InMemoryPatientsRepo());
-    dbPort.register(PatientsRepo.class, v -> new InMemoryPatientsRepo());
+  public static class SomeConsumer extends Vault {
 
-    Vault webAdapters = Vault.empty()
-        .register(Bender.class, v -> Bender.at(5467))
-        .register(ActionsPort.class, v -> new ActionsPort(v.get(Bender.class)))
-        .register(QueriesPort.class, v -> new QueriesPort(v.get(Bender.class)));
+    private final SomeService someService;
 
-    MyApp myApp = MyApp.with(dbPortInMemory, webAdapters);
-    myApp.register(PatientsModule.class, v -> new PatientsModule(v.get(QueriesPort.class), v.get(PatientsRepo.class)));
-    myApp.register(AuthModule.class, v -> new AuthModule(v.get(ActionsPort.class), v.get(PatientsRepo.class)));
+    public SomeConsumer(Vault vault) {
+      super(vault);
+      someService = get(SomeService.class);
+    }
 
-    myApp.initAndRun();
+    public String doSomething() {
+      return this.someService.doSomething();
+    }
+  }
 
-    // EN LOS TESTS
-    Vault mitest = Vault.with(dbPortInMemory, webAdaptersInMemory)
-        .register(PatientsModule.class, v -> new PatientsModule(v.get(QueriesPort.class), v.get(PatientsRepo.class)));
+  private class SomeService implements LifeCycle {
+    public Status status = Status.IDLE;
 
-    InMemoryQueriesPort fakeeee = mitest.get(QueriesPort.class);
+    @Override
+    public void start() {
+      status = Status.STARTED;
+    }
 
-    fakeeee.simulate("/cocotero");
-    */
+    @Override
+    public void stop() {
+      status = Status.STOPPED;
+    }
+
+    public String doSomething() {
+      if (status.equals(Status.IDLE))
+        throw new RuntimeException("Tried to do something while in IDLE status ");
+      return status.equals(Status.STARTED) ? IT_WORKS : ITS_STOPPED;
+    }
+  }
 }

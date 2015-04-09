@@ -1,22 +1,23 @@
 package net.programania;
 
 import java.util.*;
+import java.util.function.Consumer;
 
-public class Vault {
+public class Vault implements LifeCycle {
   private final List<Vault> parents;
   private final Map<Class, VaultSupplier<?>> suppliers = new HashMap<>();
   private final Map<VaultSupplier, Object> instances = new HashMap<>();
 
+  public Vault() {
+    this.parents = new ArrayList<>();
+  }
+
+  public Vault(Vault... parents) {
+    this.parents = Arrays.asList(parents);
+  }
+
   public Vault(List<Vault> parents) {
     this.parents = parents;
-  }
-
-  public static Vault empty() {
-    return new Vault(new ArrayList<>());
-  }
-
-  public static Vault with(Vault... parents) {
-    return new Vault(Arrays.asList(parents));
   }
 
   public <T> Vault register(Class<T> clazz, VaultSupplier<T> supplier) {
@@ -47,5 +48,23 @@ public class Vault {
         .filter(Optional::isPresent)
         .map(Optional::get)
         .findFirst();
+  }
+
+  @Override
+  public void start() {
+    changeLifeCycle(LifeCycle::start);
+  }
+
+  @Override
+  public void stop() {
+    changeLifeCycle(LifeCycle::stop);
+  }
+
+  private void changeLifeCycle(final Consumer<LifeCycle> lifeCycleChanger) {
+    parents.stream().forEach(lifeCycleChanger);
+    instances.values().stream()
+        .filter(o -> o instanceof LifeCycle)
+        .map(o -> (LifeCycle) o)
+        .forEach(lifeCycleChanger);
   }
 }
